@@ -9,14 +9,13 @@
     <version>16</version>
   </parent>
 
-  <groupId>org.gbif</groupId>
-  <artifactId>ws-validurl</artifactId>
+  <artifactId>validurl-ws</artifactId>
   <version>1.3-SNAPSHOT</version>
   <packaging>war</packaging>
 
   <name>URL Validation Service</name>
   <description>Servlet that executes an HTTP GET on the passed url parameter and returns information about status code, headers, timeouts and other errors. Can be used to see if a given url is publicly accessible (not hidden behind firewalls or proxies) and effectively reachable from GBIF.</description>
-  <url>http://sites.gbif.org/common-resources/ws-validurl</url>
+  <url>http://tools.gbif.org/ws-validurl</url>
 
   <properties>
     <httpclient.version>4.2.3</httpclient.version>
@@ -35,19 +34,20 @@
   </developers>
 
   <scm>
-    <connection>scm:svn:http://gbif-common-resources.googlecode.com/svn/ws-validurl/trunk</connection>
-    <developerConnection>scm:svn:https://gbif-common-resources.googlecode.com/svn/ws-validurl/trunk</developerConnection>
-    <url>http://code.google.com/p/gbif-common-resources/source/browse/#svn/ws-validurl/trunk</url>
+    <connection>scm:git:git@github.com:gbif/${project.artifactId}.git</connection>
+    <url>https://github.com/gbif/${project.artifactId}</url>
+    <developerConnection>scm:git:git@github.com:gbif/${project.artifactId}.git</developerConnection>
+    <tag>HEAD</tag>
   </scm>
 
   <issueManagement>
-    <system>Google Code</system>
-    <url>http://code.google.com/p/gbif-occurrencestore/issues/list</url>
+    <system>GitHub</system>
+    <url>https://github.com/gbif/validurl-ws/issues</url>
   </issueManagement>
 
   <ciManagement>
     <system>jenkins</system>
-    <url>http://builds.gbif.org/job/ws-validurl</url>
+    <url>http://builds2.gbif.org/job/validurl-ws</url>
   </ciManagement>
 
   <distributionManagement>
