@@ -51,7 +51,7 @@ public class UrlValidationServlet extends HttpServlet {
 
   /**
    * Gets a parameter but treats it case insensitive.
-   * <p/>
+   * <p>
    * So if we're looking for a <code>parameter</code> called <code>url</code> we'd also return a user-provided
    * parameter
    * with the name <code>URL</code>.
