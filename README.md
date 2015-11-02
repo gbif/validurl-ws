@@ -6,7 +6,7 @@ The validurl-ws provides:
 
 ## To build the project
 ```
-mvn clean package
+mvn clean install
 ```
 
 ## Policies
