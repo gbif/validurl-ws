@@ -3,35 +3,32 @@ package org.gbif.ws.servlet;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.security.NoSuchAlgorithmException;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
+import javax.net.ssl.SSLContext;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.util.JSONPObject;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.params.ClientPNames;
 import org.apache.http.conn.ConnectTimeoutException;
-import org.apache.http.conn.scheme.PlainSocketFactory;
-import org.apache.http.conn.scheme.Scheme;
-import org.apache.http.conn.scheme.SchemeRegistry;
-import org.apache.http.conn.ssl.SSLSocketFactory;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager;
-import org.apache.http.params.BasicHttpParams;
-import org.apache.http.params.CoreProtocolPNames;
-import org.apache.http.params.HttpConnectionParams;
-import org.apache.http.params.HttpParams;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.util.JSONPObject;
 
 public class UrlValidationServlet extends HttpServlet {
 
@@ -39,7 +36,7 @@ public class UrlValidationServlet extends HttpServlet {
   private static final String URL_PARAM = "url";
   private static final String CALLBACK_PARAM = "callback";
   private static final String CHARSET = "UTF-8";
-  private static final DefaultHttpClient CLIENT = provideHttpClient();
+  private static final HttpClient CLIENT = provideHttpClient();
   private static final ObjectMapper MAPPER = new ObjectMapper();
 
   // The timeout in milliseconds until a connection is established.
@@ -81,27 +78,34 @@ public class UrlValidationServlet extends HttpServlet {
     return p;
   }
 
-  private static DefaultHttpClient provideHttpClient() {
-    HttpParams params = new BasicHttpParams();
-    SchemeRegistry schemeRegistry = new SchemeRegistry();
-    schemeRegistry.register(new Scheme("http", 80, PlainSocketFactory.getSocketFactory()));
-    schemeRegistry.register(new Scheme("https", 443, SSLSocketFactory.getSocketFactory()));
-
-    HttpConnectionParams.setConnectionTimeout(params, TIMEOUT);
-    HttpConnectionParams.setSoTimeout(params, TIMEOUT);
-
-    params.setParameter(CoreProtocolPNames.USER_AGENT, "GBIF-Url-Validator");
-    params.setBooleanParameter(ClientPNames.HANDLE_REDIRECTS, true);
-
-    ThreadSafeClientConnManager cm = new ThreadSafeClientConnManager(schemeRegistry);
+  private static HttpClient provideHttpClient() {
+    PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager();
     cm.setMaxTotal(MAX_TOTAL_CONNECTIONS);
     cm.setDefaultMaxPerRoute(MAX_CONNECTIONS_PER_ROUTE);
 
-    return new DefaultHttpClient(cm, params);
+    SSLContext sslContext;
+    try {
+      sslContext = SSLContext.getDefault();
+    } catch (NoSuchAlgorithmException e) {
+      throw new RuntimeException("Failed to create SSL context", e);
+    }
+    SSLConnectionSocketFactory sslsf = new SSLConnectionSocketFactory(sslContext);
+
+    RequestConfig requestConfig = RequestConfig.custom()
+        .setConnectTimeout(TIMEOUT)
+        .setSocketTimeout(TIMEOUT)
+        .build();
+
+    return HttpClients.custom()
+        .setConnectionManager(cm)
+        .setSSLSocketFactory(sslsf)
+        .setDefaultRequestConfig(requestConfig)
+        .setUserAgent("GBIF-Url-Validator")
+        .build();
   }
 
   @Override
-  protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+  protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
     // before parsing set content type and other response headers
     resp.setContentType("application/json; charset=" + CHARSET);
     resp.setCharacterEncoding(CHARSET);
@@ -111,7 +115,7 @@ public class UrlValidationServlet extends HttpServlet {
     String callback = para(req, CALLBACK_PARAM);
 
     // some response, return status code & headers as json
-    Map<String, Object> data = new HashMap<String, Object>();
+    Map<String, Object> data = new HashMap<>();
     data.put("success", false);
     data.put("url", url);
 
