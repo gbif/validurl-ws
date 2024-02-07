@@ -9,7 +9,7 @@
   </parent>
 
   <artifactId>validurl-ws</artifactId>
-  <version>1.4-SNAPSHOT</version>
+  <version>1.3-SNAPSHOT</version>
   <packaging>war</packaging>
 
   <name>URL Validation Service</name>
