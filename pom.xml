@@ -6,7 +6,7 @@
   <parent>
     <groupId>org.gbif</groupId>
     <artifactId>motherpom</artifactId>
-    <version>16</version>
+    <version>56</version>
   </parent>
 
   <artifactId>validurl-ws</artifactId>
@@ -15,15 +15,15 @@
 
   <name>URL Validation Service</name>
   <description>Servlet that executes an HTTP GET on the passed url parameter and returns information about status code, headers, timeouts and other errors. Can be used to see if a given url is publicly accessible (not hidden behind firewalls or proxies) and effectively reachable from GBIF.</description>
-  <url>http://tools.gbif.org/ws-validurl</url>
+  <url>https://tools.gbif.org/ws-validurl</url>
 
   <properties>
-    <httpclient.version>4.2.3</httpclient.version>
-    <httpcore.version>4.2.3</httpcore.version>
+    <httpclient.version>4.5.14</httpclient.version>
+    <httpcore.version>4.4.16</httpcore.version>
     <jackson.version>1.9.11</jackson.version>
-    <logback.version>1.1.2</logback.version>
-    <servlet-api.version>2.5</servlet-api.version>
-    <slf4j-api.version>1.7.7</slf4j-api.version>
+    <logback.version>1.3.14</logback.version>
+    <servlet-api.version>4.0.1</servlet-api.version>
+    <slf4j-api.version>1.7.36</slf4j-api.version>
   </properties>
 
   <developers>
@@ -47,7 +47,7 @@
 
   <ciManagement>
     <system>jenkins</system>
-    <url>http://builds2.gbif.org/job/validurl-ws</url>
+    <url>https://builds.gbif.org/job/validurl-ws/</url>
   </ciManagement>
 
   <distributionManagement>
@@ -88,7 +88,7 @@
   <repositories>
     <repository>
       <id>gbif-all</id>
-      <url>http://repository.gbif.org/content/groups/gbif</url>
+      <url>https://repository.gbif.org/content/groups/gbif</url>
     </repository>
   </repositories>
 
@@ -101,7 +101,7 @@
     </dependency>
     <dependency>
       <groupId>javax.servlet</groupId>
-      <artifactId>servlet-api</artifactId>
+      <artifactId>javax.servlet-api</artifactId>
       <version>${servlet-api.version}</version>
       <scope>provided</scope>
     </dependency>
