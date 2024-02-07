@@ -12,6 +12,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.util.JSONPObject;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
@@ -28,8 +30,6 @@ import org.apache.http.params.BasicHttpParams;
 import org.apache.http.params.CoreProtocolPNames;
 import org.apache.http.params.HttpConnectionParams;
 import org.apache.http.params.HttpParams;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.util.JSONPObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,7 +50,7 @@ public class UrlValidationServlet extends HttpServlet {
 
 
   /**
-   * Gets a parameter but treats it case insensitive.
+   * Gets a parameter but treats it case-insensitive.
    * <p>
    * So if we're looking for a <code>parameter</code> called <code>url</code> we'd also return a user-provided
    * parameter
@@ -62,8 +62,8 @@ public class UrlValidationServlet extends HttpServlet {
    * @return either the parameter value if it could be found, null otherwise
    */
   public static String para(ServletRequest req, String parameter) {
-    // lookup parameter names case insensitive
-    Map<String, String> paramLookup = new HashMap<String, String>();
+    // lookup parameter names case-insensitive
+    Map<String, String> paramLookup = new HashMap<>();
 
     Enumeration paramNames = req.getParameterNames();
     while (paramNames.hasMoreElements()) {
@@ -134,7 +134,7 @@ public class UrlValidationServlet extends HttpServlet {
       data.put("status", code);
       data.put("success", code >= 200 && code < 300);
 
-      Map<String, String> header = new HashMap<String, String>();
+      Map<String, String> header = new HashMap<>();
       for (Header h : response.getAllHeaders()) {
         header.put(h.getName(), h.getValue());
       }
@@ -143,9 +143,7 @@ public class UrlValidationServlet extends HttpServlet {
 
       resp.setStatus(HttpServletResponse.SC_OK);
 
-    } catch (IllegalArgumentException e) {
-      data.put("error", "InvalidUrlParameter");
-    } catch (IllegalStateException e) {
+    } catch (IllegalArgumentException | IllegalStateException e) {
       data.put("error", "InvalidUrlParameter");
     } catch (ConnectTimeoutException e) {
       data.put("error", "ConnectionTimeout");
@@ -155,7 +153,7 @@ public class UrlValidationServlet extends HttpServlet {
       data.put("error", "IOException");
     } catch (Exception e) {
       data.put("error", e.getMessage());
-      LOG.error("Error testing url {}", e);
+      LOG.error("Error testing url", e);
     } finally {
       if (get != null) {
         get.abort();
@@ -163,15 +161,12 @@ public class UrlValidationServlet extends HttpServlet {
     }
 
     // write response
-    Writer writer = new OutputStreamWriter(resp.getOutputStream(), CHARSET);
-    try {
+    try (Writer writer = new OutputStreamWriter(resp.getOutputStream(), CHARSET)) {
       if (callback == null || callback.isEmpty()) {
         MAPPER.writeValue(writer, data);
       } else {
         MAPPER.writeValue(writer, new JSONPObject(callback, data));
       }
-    } finally {
-      writer.close();
     }
 
     resp.flushBuffer();
