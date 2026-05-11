@@ -9,7 +9,7 @@
   </parent>
 
   <artifactId>validurl-ws</artifactId>
-  <version>1.4</version>
+  <version>1.5-SNAPSHOT</version>
   <packaging>war</packaging>
 
   <name>URL Validation Service</name>
@@ -34,7 +34,7 @@
     <connection>scm:git:git@github.com:gbif/${project.artifactId}.git</connection>
     <url>https://github.com/gbif/${project.artifactId}</url>
     <developerConnection>scm:git:git@github.com:gbif/${project.artifactId}.git</developerConnection>
-    <tag>validurl-ws-1.4</tag>
+    <tag>HEAD</tag>
   </scm>
 
   <build>
