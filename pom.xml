@@ -5,7 +5,7 @@
   <parent>
     <groupId>org.gbif</groupId>
     <artifactId>motherpom</artifactId>
-    <version>56</version>
+    <version>61</version>
   </parent>
 
   <artifactId>validurl-ws</artifactId>
@@ -17,20 +17,18 @@
   <url>https://tools.gbif.org/ws-validurl</url>
 
   <properties>
+    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.target>17</maven.compiler.target>
+    <java.version>17</java.version>
+
     <httpclient.version>4.5.14</httpclient.version>
     <httpcore.version>4.4.16</httpcore.version>
     <jackson.version>2.16.1</jackson.version>
-    <logback.version>1.3.14</logback.version>
-    <servlet-api.version>4.0.1</servlet-api.version>
-    <slf4j-api.version>1.7.36</slf4j-api.version>
-  </properties>
+    <log4j.version>2.26.0</log4j.version>
+    <jakarta.servlet-api.version>6.0.0</jakarta.servlet-api.version>
 
-  <developers>
-    <developer>
-      <name>Markus Döring</name>
-      <email>mdoering@gbif.org</email>
-    </developer>
-  </developers>
+    <maven-war-plugin.version>3.5.1</maven-war-plugin.version>
+  </properties>
 
   <scm>
     <connection>scm:git:git@github.com:gbif/${project.artifactId}.git</connection>
@@ -39,43 +37,13 @@
     <tag>HEAD</tag>
   </scm>
 
-  <issueManagement>
-    <system>GitHub</system>
-    <url>https://github.com/gbif/validurl-ws/issues</url>
-  </issueManagement>
-
-  <ciManagement>
-    <system>jenkins</system>
-    <url>https://builds.gbif.org/job/validurl-ws/</url>
-  </ciManagement>
-
-  <distributionManagement>
-    <site>
-      <id>gbif-site</id>
-      <name>Site for the URL Validation WS project</name>
-      <url>scp://tools.gbif.org:/var/www/html/sites/common-resources/ws-validurl</url>
-    </site>
-  </distributionManagement>
-
   <build>
-    <defaultGoal>jetty:run</defaultGoal>
     <plugins>
       <plugin>
-        <groupId>org.mortbay.jetty</groupId>
-        <artifactId>maven-jetty-plugin</artifactId>
-        <version>6.1.26</version>
-        <configuration>
-          <contextPath>/ws-validurl</contextPath>
-          <scanIntervalSeconds>10</scanIntervalSeconds>
-          <connectors>
-            <connector implementation="org.mortbay.jetty.nio.SelectChannelConnector">
-              <port>7002</port>
-              <maxIdleTime>60000</maxIdleTime>
-            </connector>
-          </connectors>
-        </configuration>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-war-plugin</artifactId>
+        <version>${maven-war-plugin.version}</version>
       </plugin>
-
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
@@ -102,17 +70,18 @@
 
   <dependencies>
     <dependency>
-      <groupId>ch.qos.logback</groupId>
-      <artifactId>logback-classic</artifactId>
-      <version>${logback.version}</version>
-      <scope>runtime</scope>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-core</artifactId>
+      <version>${log4j.version}</version>
     </dependency>
+
     <dependency>
-      <groupId>javax.servlet</groupId>
-      <artifactId>javax.servlet-api</artifactId>
-      <version>${servlet-api.version}</version>
+      <groupId>jakarta.servlet</groupId>
+      <artifactId>jakarta.servlet-api</artifactId>
+      <version>${jakarta.servlet-api.version}</version>
       <scope>provided</scope>
     </dependency>
+
     <dependency>
       <groupId>org.apache.httpcomponents</groupId>
       <artifactId>httpclient</artifactId>
@@ -132,11 +101,6 @@
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
       <version>${jackson.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-      <version>${slf4j-api.version}</version>
     </dependency>
   </dependencies>
 

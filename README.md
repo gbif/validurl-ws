@@ -2,7 +2,7 @@
 *Please note this project is used exclusively by the IPT*
 
 The validurl-ws provides:
- * A web service to validate if a URL is publicly availalbe or not. The IPT calls this web service before registration with GBIF, e.g. http://tools.gbif.org/ws-validurl/?url=http://ipt.gbif.org/&callback=?
+ * A web service to validate if a URL is publicly available or not. The IPT calls this web service before registration with GBIF, e.g. http://tools.gbif.org/ws-validurl/?url=http://ipt.gbif.org/&callback=?
 
 ## To build the project
 ```
