@@ -12,10 +12,16 @@ import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.config.Registry;
+import org.apache.http.config.RegistryBuilder;
 import org.apache.http.conn.ConnectTimeoutException;
+import org.apache.http.conn.DnsResolver;
+import org.apache.http.conn.socket.ConnectionSocketFactory;
+import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.apache.http.impl.conn.SystemDefaultDnsResolver;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -23,6 +29,9 @@ import javax.net.ssl.SSLContext;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -34,7 +43,24 @@ public class UrlValidationServlet extends HttpServlet {
   private static final String URL_PARAM = "url";
   private static final String CALLBACK_PARAM = "callback";
   private static final String CHARSET = "UTF-8";
-  private static final HttpClient CLIENT = provideHttpClient();
+
+  /**
+   * Resolves host names like the system resolver, but only to public internet addresses: the service checks whether a
+   * URL is reachable from the internet, so other addresses are out of scope.
+   * <p>
+   * Must stay above CLIENT: static fields are set top to bottom, and a client built while this is still null silently
+   * uses the system resolver (UrlValidationServletTest.testClientRefusesLocalServer).
+   */
+  static final DnsResolver PUBLIC_ONLY_DNS_RESOLVER = host -> {
+    InetAddress[] addresses = SystemDefaultDnsResolver.INSTANCE.resolve(host);
+    for (InetAddress address : addresses) {
+      if (!isPublic(address)) {
+        throw new NonPublicAddressException(host);
+      }
+    }
+    return addresses;
+  };
+  static final HttpClient CLIENT = provideHttpClient();
   private static final ObjectMapper MAPPER = new ObjectMapper();
 
   // The timeout in milliseconds until a connection is established.
@@ -76,11 +102,42 @@ public class UrlValidationServlet extends HttpServlet {
     return p;
   }
 
-  private static HttpClient provideHttpClient() {
-    PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager();
-    cm.setMaxTotal(MAX_TOTAL_CONNECTIONS);
-    cm.setDefaultMaxPerRoute(MAX_CONNECTIONS_PER_ROUTE);
+  /**
+   * Thrown when a host name resolves to an address that isn't on the public internet.
+   */
+  static class NonPublicAddressException extends UnknownHostException {
+    NonPublicAddressException(String host) {
+      super(host + " is not a public address");
+    }
+  }
 
+  /**
+   * @return true for addresses on the public internet; false for loopback, private, link-local, carrier-grade NAT,
+   * unique local IPv6, multicast and other reserved ranges
+   */
+  static boolean isPublic(InetAddress address) {
+    if (address.isAnyLocalAddress() || address.isLoopbackAddress() || address.isLinkLocalAddress()
+        || address.isSiteLocalAddress() || address.isMulticastAddress()) {
+      return false;
+    }
+    byte[] b = address.getAddress();
+    if (address instanceof Inet4Address) {
+      // bytes are signed in Java: & 0xff gives the usual 0-255 value
+      int b0 = b[0] & 0xff;
+      int b1 = b[1] & 0xff;
+      int b2 = b[2] & 0xff;
+      return b0 != 0                                    // 0.0.0.0/8 "this network"
+          && !(b0 == 100 && b1 >= 64 && b1 <= 127)      // 100.64.0.0/10 carrier-grade NAT
+          && !(b0 == 192 && b1 == 0 && b2 == 0)         // 192.0.0.0/24 IETF protocol assignments
+          && !(b0 == 198 && (b1 == 18 || b1 == 19))     // 198.18.0.0/15 benchmarking
+          && b0 < 240;                                  // 240.0.0.0/4 reserved, broadcast
+    }
+    // IPv6 (IPv4-mapped addresses come back as Inet4Address): fc00::/7 unique local, fec0::/10 is site-local above
+    int first = b[0] & 0xff;
+    return first != 0xfc && first != 0xfd;
+  }
+
+  private static HttpClient provideHttpClient() {
     SSLContext sslContext;
     try {
       sslContext = SSLContext.getDefault();
@@ -89,6 +146,17 @@ public class UrlValidationServlet extends HttpServlet {
     }
     SSLConnectionSocketFactory sslsf = new SSLConnectionSocketFactory(sslContext);
 
+    // the socket factories go to the connection manager: the client's own SSL socket factory is ignored once a
+    // connection manager is set
+    Registry<ConnectionSocketFactory> socketFactories = RegistryBuilder.<ConnectionSocketFactory>create()
+        .register("http", PlainConnectionSocketFactory.getSocketFactory())
+        .register("https", sslsf)
+        .build();
+    PoolingHttpClientConnectionManager cm =
+        new PoolingHttpClientConnectionManager(socketFactories, PUBLIC_ONLY_DNS_RESOLVER);
+    cm.setMaxTotal(MAX_TOTAL_CONNECTIONS);
+    cm.setDefaultMaxPerRoute(MAX_CONNECTIONS_PER_ROUTE);
+
     RequestConfig requestConfig = RequestConfig.custom()
         .setConnectTimeout(TIMEOUT)
         .setSocketTimeout(TIMEOUT)
@@ -96,7 +164,6 @@ public class UrlValidationServlet extends HttpServlet {
 
     return HttpClients.custom()
         .setConnectionManager(cm)
-        .setSSLSocketFactory(sslsf)
         .setDefaultRequestConfig(requestConfig)
         .setUserAgent("GBIF-Url-Validator")
         .build();
@@ -147,6 +214,9 @@ public class UrlValidationServlet extends HttpServlet {
 
     } catch (IllegalArgumentException | IllegalStateException e) {
       data.put("error", "InvalidUrlParameter");
+    } catch (NonPublicAddressException e) {
+      LOG.info("Refused non-public URL: {}", url);
+      data.put("error", "NonPublicAddress");
     } catch (ConnectTimeoutException e) {
       data.put("error", "ConnectionTimeout");
     } catch (ClientProtocolException e) {
